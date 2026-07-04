@@ -7,3 +7,5 @@ Task 2: complete (commit c2243d4, review clean).
 Task 3 started: draft introduction, value, and problem sections.
 Task 3: complete (commit f3d2512, review clean).
 Task 4 started: core model section.
+Task 4: complete (commit 817b60e, review clean).
+Task 5 started: practice path and effectiveness sections.
