@@ -9,3 +9,5 @@ Task 3: complete (commit f3d2512, review clean).
 Task 4 started: core model section.
 Task 4: complete (commit 817b60e, review clean).
 Task 5 started: practice path and effectiveness sections.
+Task 5: complete (commit 24e0726, review clean).
+Task 6 started: conclusion, abstract, and keyword normalization.
