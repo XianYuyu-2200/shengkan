@@ -5,6 +5,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.section import WD_SECTION
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -129,13 +130,120 @@ def add_reference_paragraph(doc: Document, text: str):
     set_run_font(run, 10)
 
 
+def is_markdown_table_line(line: str) -> bool:
+    stripped = line.strip()
+    return stripped.startswith("|") and stripped.endswith("|")
+
+
+def parse_table_row(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
+def is_separator_row(cells: list[str]) -> bool:
+    return all(re.fullmatch(r":?-{3,}:?", cell.strip()) for cell in cells)
+
+
+def set_cell_shading(cell, fill: str):
+    tc_pr = cell._tc.get_or_add_tcPr()
+    shd = tc_pr.find(qn("w:shd"))
+    if shd is None:
+        shd = OxmlElement("w:shd")
+        tc_pr.append(shd)
+    shd.set(qn("w:fill"), fill)
+
+
+def set_cell_margins(cell, top=80, bottom=80, start=120, end=120):
+    tc_pr = cell._tc.get_or_add_tcPr()
+    tc_mar = tc_pr.find(qn("w:tcMar"))
+    if tc_mar is None:
+        tc_mar = OxmlElement("w:tcMar")
+        tc_pr.append(tc_mar)
+    for margin, value in [("top", top), ("bottom", bottom), ("start", start), ("end", end)]:
+        node = tc_mar.find(qn(f"w:{margin}"))
+        if node is None:
+            node = OxmlElement(f"w:{margin}")
+            tc_mar.append(node)
+        node.set(qn("w:w"), str(value))
+        node.set(qn("w:type"), "dxa")
+
+
+def set_table_width(table, width_dxa=9360, indent_dxa=120):
+    tbl_pr = table._tbl.tblPr
+    tbl_w = tbl_pr.find(qn("w:tblW"))
+    if tbl_w is None:
+        tbl_w = OxmlElement("w:tblW")
+        tbl_pr.append(tbl_w)
+    tbl_w.set(qn("w:w"), str(width_dxa))
+    tbl_w.set(qn("w:type"), "dxa")
+
+    tbl_ind = tbl_pr.find(qn("w:tblInd"))
+    if tbl_ind is None:
+        tbl_ind = OxmlElement("w:tblInd")
+        tbl_pr.append(tbl_ind)
+    tbl_ind.set(qn("w:w"), str(indent_dxa))
+    tbl_ind.set(qn("w:type"), "dxa")
+
+
+def add_markdown_table(doc: Document, rows: list[list[str]]):
+    if not rows:
+        return
+
+    col_count = len(rows[0])
+    table = doc.add_table(rows=0, cols=col_count)
+    table.alignment = WD_TABLE_ALIGNMENT.LEFT
+    table.style = "Table Grid"
+    table.autofit = False
+    set_table_width(table)
+
+    widths_by_count = {
+        3: [2200, 3400, 3760],
+        4: [1800, 2400, 2600, 2560],
+    }
+    widths = widths_by_count.get(col_count, [int(9360 / col_count)] * col_count)
+
+    for row_index, row_cells in enumerate(rows):
+        cells = table.add_row().cells
+        for col_index, text in enumerate(row_cells):
+            cell = cells[col_index]
+            cell.width = Pt(widths[col_index] / 20)
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            set_cell_margins(cell)
+            if row_index == 0:
+                set_cell_shading(cell, "F4F6F9")
+            paragraph = cell.paragraphs[0]
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER if row_index == 0 else WD_ALIGN_PARAGRAPH.LEFT
+            paragraph.paragraph_format.space_after = Pt(0)
+            paragraph.paragraph_format.line_spacing = 1.167
+            run = paragraph.add_run(text)
+            set_run_font(run, 10, bold=(row_index == 0))
+
+    spacer = doc.add_paragraph()
+    spacer.paragraph_format.space_after = Pt(6)
+
+
 def parse_markdown(lines: list[str], doc: Document):
     in_references = False
     title_done = False
 
-    for raw in lines:
+    i = 0
+    while i < len(lines):
+        raw = lines[i]
         line = raw.strip()
+        i += 1
         if not line:
+            continue
+
+        if is_markdown_table_line(line):
+            rows: list[list[str]] = []
+            while True:
+                cells = parse_table_row(line)
+                if not is_separator_row(cells):
+                    rows.append(cells)
+                if i >= len(lines) or not is_markdown_table_line(lines[i]):
+                    break
+                line = lines[i].strip()
+                i += 1
+            add_markdown_table(doc, rows)
             continue
 
         if line.startswith("# "):
@@ -177,7 +285,7 @@ def parse_markdown(lines: list[str], doc: Document):
             p.paragraph_format.space_after = Pt(12)
             run = p.add_run(line)
             set_run_font(run, 11)
-        elif line.startswith("图1 "):
+        elif line.startswith("图1 ") or line.startswith("表"):
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             p.paragraph_format.space_before = Pt(6)
