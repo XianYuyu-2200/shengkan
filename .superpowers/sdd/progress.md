@@ -13,3 +13,6 @@ Task 5: complete (commit 24e0726, review clean).
 Task 6 started: conclusion, abstract, and keyword normalization.
 Task 6: complete (commit 535fae9, review clean).
 Task 7 started: references and citation support.
+Task 7: complete (commit 1a4524d, review clean).
+Task 8 started: revision and submission checklist.
+Task 8: complete (pending commit, review clean).
