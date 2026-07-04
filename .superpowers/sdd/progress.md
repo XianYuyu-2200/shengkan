@@ -11,3 +11,5 @@ Task 4: complete (commit 817b60e, review clean).
 Task 5 started: practice path and effectiveness sections.
 Task 5: complete (commit 24e0726, review clean).
 Task 6 started: conclusion, abstract, and keyword normalization.
+Task 6: complete (commit 535fae9, review clean).
+Task 7 started: references and citation support.
