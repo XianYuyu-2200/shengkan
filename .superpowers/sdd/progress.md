@@ -5,3 +5,5 @@ Task 1: complete (commit ba12d12, review clean).
 Task 2 started: detailed paper outline.
 Task 2: complete (commit c2243d4, review clean).
 Task 3 started: draft introduction, value, and problem sections.
+Task 3: complete (commit f3d2512, review clean).
+Task 4 started: core model section.
